@@ -77,7 +77,7 @@ class Auth implements AuthInterface
 
         $_SESSION['userId'] = $id;
 
-        header('Location: studentsview.php');
+        header('Location: home.php');
         exit;
     }
 
@@ -127,7 +127,7 @@ class Auth implements AuthInterface
 
         $_SESSION['userId'] = (int)$rowArr['id'];
 
-        header('Location: studentsview.php');
+        header('Location: home.php');
         exit;
     }
 
