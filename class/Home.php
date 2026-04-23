@@ -55,27 +55,43 @@ class Home implements HomeInterface
             return;
         }
 
-        $name = trim($_POST['name'] ?? '');
-        $hours = trim($_POST['hours'] ?? '');
-
-        if ($name === '' || $hours === '') {
-            \App\Alert::printMessage('All fields are required', 'danger');
-            return;
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            session_start();
         }
 
-        if (!ctype_digit($hours) || (int)$hours <= 0) {
-            \App\Alert::printMessage('Hours must be a valid positive integer', 'danger');
-            return;
+        $userId = (int)($_SESSION['userId'] ?? 0);
+        if ($userId <= 0) {
+            $_SESSION['flash'] = ['text' => 'User not logged in', 'type' => 'danger'];
+            $this->redirectBack();
         }
-        $hours = (int)$hours;
 
-        $stmt = $this->db->connection->prepare('INSERT INTO courses (course_name, hours) VALUES (?, ?)');
-        $stmt->bind_param('si', $name, $hours);
+        $courseIdRaw = $_POST['course_id'] ?? '';
+        if (!ctype_digit((string)$courseIdRaw) || (int)$courseIdRaw <= 0) {
+            $_SESSION['flash'] = ['text' => 'Please select a course', 'type' => 'danger'];
+            $this->redirectBack();
+        }
+        $courseId = (int)$courseIdRaw;
+
+        $check = $this->db->connection->prepare('SELECT 1 FROM course_user WHERE user_id = ? AND course_id = ?');
+        $check->bind_param('ii', $userId, $courseId);
+        $check->execute();
+        $exists = $check->get_result()->num_rows > 0;
+
+        if ($exists) {
+            $_SESSION['flash'] = ['text' => 'You already registered this course', 'type' => 'warning'];
+            $this->redirectBack();
+        }
+
+        $stmt = $this->db->connection->prepare('INSERT INTO course_user (user_id, course_id) VALUES (?, ?)');
+        $stmt->bind_param('ii', $userId, $courseId);
+
         if ($stmt->execute()) {
-            \App\Alert::printMessage('Course added successfully', 'success');
+            $_SESSION['flash'] = ['text' => 'Course added successfully', 'type' => 'success'];
         } else {
-            \App\Alert::printMessage('Failed to add course: ' . $stmt->error, 'danger');
+            $_SESSION['flash'] = ['text' => 'Failed to add course', 'type' => 'danger'];
         }
+
+        $this->redirectBack();
     }
     
     public function updateCourse(): void
@@ -85,6 +101,15 @@ class Home implements HomeInterface
     
     public function deleteCourse(): void
     {
-        
+    }
+
+    private function redirectBack(): void
+    {
+        $to = $_SERVER['PHP_SELF'] ?? '';
+        if ($to === '') {
+            $to = '/';
+        }
+        header('Location: ' . $to);
+        exit;
     }
 }

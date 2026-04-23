@@ -2,12 +2,19 @@
 
 require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
 
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+
 
 $auth = new \App\Auth();
 $auth->logOut();
 
 $home = new \App\Home();
 $allCourses = $home->getCourses();
+$home->addCourse();
+$home->deleteCourse();
+$getRegeisteredCourses = $home->getUserCourses() ?? [];
 
 ?>
 
@@ -21,6 +28,8 @@ $allCourses = $home->getCourses();
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
     <link href="../../assets/css/home.css" rel="stylesheet">
 
 </head>
@@ -31,6 +40,11 @@ $allCourses = $home->getCourses();
 
         <div class="card card-custom shadow p-4">
 
+            <?php if (isset($_SESSION['flash']) && is_array($_SESSION['flash'])): ?>
+                <?php \App\Alert::printMessage($_SESSION['flash']['text'] ?? '', $_SESSION['flash']['type'] ?? 'info'); ?>
+                <?php unset($_SESSION['flash']); ?>
+            <?php endif; ?>
+
             <h3 class="mb-3">Courses List</h3>
 
 
@@ -40,7 +54,7 @@ $allCourses = $home->getCourses();
                 </button>
             </div>
 
-            <!-- Table -->
+        
             <table class="table table-bordered table-hover bg-white">
                 <thead>
                     <tr>
@@ -53,27 +67,29 @@ $allCourses = $home->getCourses();
 
                 <tbody id="courseTable">
 
-                    <tr>
-                        <td>1</td>
-                        <td>Math</td>
-                        <td>3</td>
-                        <td>
-                            <button onclick="deleteRow(this)" style="border:none; background:none; font-size:18px;">
-                                🗑
-                            </button>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>2</td>
-                        <td>Physics</td>
-                        <td>4</td>
-                        <td>
-                            <button onclick="deleteRow(this)" style="border:none; background:none; font-size:18px;">
-                                🗑
-                            </button>
-                        </td>
-                    </tr>
+                    <?php if (empty($getRegeisteredCourses)): ?>
+                        <tr>
+                            <td colspan="4" class="text-center">No registered courses yet</td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($getRegeisteredCourses as $course): ?>
+                            <tr>
+                                <td><?= (int)($course['id'] ?? 0) ?></td>
+                                <td><?= htmlspecialchars($course['course_name'] ?? '') ?></td>
+                                <td><?= (int)($course['hours'] ?? 0) ?></td>
+                                <td class="text-center">
+                                    <form method="POST" class="d-inline">
+                                        <input type="hidden" name="action" value="delete_course">
+                                        <input type="hidden" name="course_id" value="<?= (int)($course['id'] ?? 0) ?>">
+                                        <button type="submit" class="btn btn-link p-0" aria-label="Remove course">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                        
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
 
                 </tbody>
             </table>
@@ -89,35 +105,8 @@ $allCourses = $home->getCourses();
 
     </div>
 
-    <!-- Modal -->
-    <div class="modal fade" id="addCourseModal">
-        <div class="modal-dialog">
-            <div class="modal-content">
-
-                <div class="modal-header">
-                    <h5 class="modal-title">Add Course</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-
-                <div class="modal-body">
-                                        <select id="courseSelect" class="form-control mb-2">
-                                                <option value="">Select Course</option>
-
-                                                <?php foreach ($allCourses as $course): ?>
-                                                        <option value="<?= htmlspecialchars($course['course_name'] ?? '') ?>" data-hours="<?= (int)($course['hours'] ?? 0) ?>">
-                                                                <?= htmlspecialchars($course['course_name'] ?? '') ?>
-                                                        </option>
-                                                <?php endforeach; ?>
-                                        </select>
-                </div>
-
-                <div class="modal-footer">
-                    <button class="btn pink-btn" onclick="addCourse()">Add</button>
-                </div>
-
-            </div>
-        </div>
-    </div>
+    <?php include __DIR__ . '/partials/add_course_modal.php'; ?>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 
