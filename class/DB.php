@@ -9,7 +9,7 @@ class DB
     private string $username = 'root';
     private string $password = '';
     private string $host = 'localhost';
-    private string $database = 'student_db';
+    private string $database = 'main_database';
     public mysqli $connection;
 
     public function __construct()
